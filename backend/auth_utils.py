@@ -4,7 +4,7 @@ from supabase import create_client, Client
 import os
 from typing import Optional
 
-SUPABASE_URL = os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
 security = HTTPBearer()
