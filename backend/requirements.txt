@@ -6,3 +6,4 @@ psycopg[binary]
 python-multipart
 supabase
 python-dotenv
+psycopg2-binary
