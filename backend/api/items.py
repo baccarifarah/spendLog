@@ -8,13 +8,30 @@ from auth_utils import get_current_user
 
 router = APIRouter(prefix="/items", tags=["items"])
 
-@router.get("/pending", response_model=List[schemas.Item])
+@router.get("/pending", response_model=schemas.PaginatedItems)
 def read_pending_items(
+    skip: int = 0,
+    limit: int = 10,
+    sort_by: str = "name",
+    order: str = "asc",
     db: Session = Depends(get_db),
     current_user_id: str = Depends(get_current_user)
 ):
-    """Retrieve all pending items (To Buy List) for current user"""
-    return services.get_pending_items(db=db, user_id=current_user_id)
+    """Retrieve all pending items (To Buy List) for current user with pagination/sorting"""
+    items, total = services.get_pending_items(
+        db=db, 
+        user_id=current_user_id,
+        skip=skip,
+        limit=limit,
+        sort_by=sort_by,
+        order=order
+    )
+    return {
+        "items": items,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 @router.post("/pending", response_model=schemas.Item, status_code=status.HTTP_201_CREATED)
 def create_pending_item(

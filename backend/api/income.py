@@ -17,16 +17,32 @@ def create_income(
     """Create a new income entry"""
     return services.create_income(db=db, income=income, user_id=current_user_id)
 
-@router.get("/", response_model=List[schemas.Income])
+@router.get("/", response_model=schemas.PaginatedIncomes)
 def read_incomes(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(10, ge=1, le=100),
+    sort_by: str = Query("date"),
+    order: str = Query("desc"),
     category: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user_id: str = Depends(get_current_user)
 ):
-    """Retrieve income entries with optional filtering"""
-    return services.get_incomes(db=db, skip=skip, limit=limit, category=category, user_id=current_user_id)
+    """Retrieve income entries with optional filtering, sorting and pagination"""
+    items, total = services.get_incomes(
+        db=db, 
+        skip=skip, 
+        limit=limit, 
+        sort_by=sort_by,
+        order=order,
+        category=category, 
+        user_id=current_user_id
+    )
+    return {
+        "items": items,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 @router.get("/{income_id}", response_model=schemas.Income)
 def read_income(

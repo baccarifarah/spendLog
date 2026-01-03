@@ -34,13 +34,13 @@ export default function Dashboard() {
             console.log("📡 start fetching")
             setLoading(true);
             try {
-                const [stats, receipts] = await Promise.all([
+                const [stats, receiptsData] = await Promise.all([
                     api.getDashboardStats(filters.startDate, filters.endDate),
                     api.getReceipts({ limit: 5 })
                 ]);
-                console.log("✅ fetch finished", stats, receipts)
+                console.log("✅ fetch finished", stats, receiptsData)
                 setData(stats);
-                setRecentReceipts(receipts);
+                setRecentReceipts(receiptsData.items);
             } catch (err: any) {
                 console.error("❌ fetch failed", err);
                 setError(err.message || "Failed to load dashboard data");

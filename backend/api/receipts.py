@@ -29,24 +29,34 @@ def create_receipt(
     return services.create_receipt(db=db, receipt=receipt, user_id=current_user_id)
 
 
-@router.get("/", response_model=List[schemas.Receipt])
+@router.get("/", response_model=schemas.PaginatedReceipts)
 def read_receipts(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(10, ge=1, le=100),
+    sort_by: str = Query("date"),
+    order: str = Query("desc"),
     category: Optional[str] = None,
     merchant_name: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user_id: str = Depends(get_current_user)
 ):
-    """Retrieve all receipts for current user with optional filtering"""
-    return services.get_receipts(
+    """Retrieve all receipts for current user with optional filtering, sorting and pagination"""
+    items, total = services.get_receipts(
         db=db, 
         skip=skip, 
         limit=limit,
+        sort_by=sort_by,
+        order=order,
         category=category,
         merchant_name=merchant_name,
         user_id=current_user_id
     )
+    return {
+        "items": items,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 
 @router.get("/{receipt_id}", response_model=schemas.Receipt)

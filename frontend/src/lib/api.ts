@@ -3,6 +3,13 @@ import { notFound } from "next/navigation";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+export interface PaginatedResponse<T> {
+    items: T[];
+    total: number;
+    skip: number;
+    limit: number;
+}
+
 export interface Item {
     id?: number;
     name: string;
@@ -199,17 +206,21 @@ export const api = {
     getReceipts: async (params?: {
         skip?: number;
         limit?: number;
+        sort_by?: string;
+        order?: string;
         category?: string;
         merchant_name?: string;
-    }): Promise<Receipt[]> => {
+    }): Promise<PaginatedResponse<Receipt>> => {
         const searchParams = new URLSearchParams();
         if (params) {
             if (params.skip !== undefined) searchParams.append("skip", params.skip.toString());
             if (params.limit !== undefined) searchParams.append("limit", params.limit.toString());
+            if (params.sort_by) searchParams.append("sort_by", params.sort_by);
+            if (params.order) searchParams.append("order", params.order);
             if (params.category) searchParams.append("category", params.category);
             if (params.merchant_name) searchParams.append("merchant_name", params.merchant_name);
         }
-        return fetchAPI<Receipt[]>(`/receipts?${searchParams.toString()}`);
+        return fetchAPI<PaginatedResponse<Receipt>>(`/receipts?${searchParams.toString()}`);
     },
 
     getReceipt: async (id: number): Promise<Receipt> => {
@@ -237,8 +248,20 @@ export const api = {
     },
 
     // Pending Items (To Buy List)
-    getPendingItems: async (): Promise<Item[]> => {
-        return fetchAPI<Item[]>("/items/pending");
+    getPendingItems: async (params?: {
+        skip?: number;
+        limit?: number;
+        sort_by?: string;
+        order?: string;
+    }): Promise<PaginatedResponse<Item>> => {
+        const searchParams = new URLSearchParams();
+        if (params) {
+            if (params.skip !== undefined) searchParams.append("skip", params.skip.toString());
+            if (params.limit !== undefined) searchParams.append("limit", params.limit.toString());
+            if (params.sort_by) searchParams.append("sort_by", params.sort_by);
+            if (params.order) searchParams.append("order", params.order);
+        }
+        return fetchAPI<PaginatedResponse<Item>>(`/items/pending?${searchParams.toString()}`);
     },
 
     createPendingItem: async (data: PendingItemCreate): Promise<Item> => {
@@ -305,15 +328,19 @@ export const api = {
     getIncomes: async (params?: {
         skip?: number;
         limit?: number;
+        sort_by?: string;
+        order?: string;
         category?: string;
-    }): Promise<Income[]> => {
+    }): Promise<PaginatedResponse<Income>> => {
         const searchParams = new URLSearchParams();
         if (params) {
             if (params.skip !== undefined) searchParams.append("skip", params.skip.toString());
             if (params.limit !== undefined) searchParams.append("limit", params.limit.toString());
+            if (params.sort_by) searchParams.append("sort_by", params.sort_by);
+            if (params.order) searchParams.append("order", params.order);
             if (params.category) searchParams.append("category", params.category);
         }
-        return fetchAPI<Income[]>(`/income?${searchParams.toString()}`);
+        return fetchAPI<PaginatedResponse<Income>>(`/income?${searchParams.toString()}`);
     },
 
     createIncome: async (income: IncomeCreate): Promise<Income> => {

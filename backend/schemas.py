@@ -36,6 +36,12 @@ class Item(ItemBase):
     class Config:
         from_attributes = True
 
+class PaginatedItems(BaseModel):
+    items: List[Item]
+    total: int
+    skip: int
+    limit: int
+
 class ReceiptBase(BaseModel):
     merchant_name: Optional[str] = None
     date: Optional[datetime.date] = None
@@ -69,6 +75,12 @@ class Receipt(ReceiptBase):
 
     class Config:
         from_attributes = True
+
+class PaginatedReceipts(BaseModel):
+    items: List[Receipt]
+    total: int
+    skip: int
+    limit: int
 
 # Dashboard Schemas
 class DashboardStats(BaseModel):
@@ -132,6 +144,12 @@ class Income(IncomeBase):
 
     class Config:
         from_attributes = True
+
+class PaginatedIncomes(BaseModel):
+    items: List[Income]
+    total: int
+    skip: int
+    limit: int
 
 class SettingsBase(BaseModel):
     currency: str = "TND"

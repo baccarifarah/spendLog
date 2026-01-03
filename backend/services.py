@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func, extract
-from typing import List, Optional
+from typing import List, Optional, Tuple, Any
 from datetime import datetime, timedelta, date
 import models
 import schemas
@@ -74,11 +74,13 @@ def get_receipts(
     db: Session, 
     user_id: str,
     skip: int = 0, 
-    limit: int = 100,
+    limit: int = 10,
+    sort_by: str = "date",
+    order: str = "desc",
     category: Optional[str] = None,
     merchant_name: Optional[str] = None
-) -> List[models.Receipt]:
-    """Retrieve receipts with optional filtering"""
+) -> Tuple[List[models.Receipt], int]:
+    """Retrieve receipts with optional filtering, sorting and pagination"""
     query = db.query(models.Receipt).filter(models.Receipt.user_id == user_id)
     
     if category:
@@ -86,7 +88,21 @@ def get_receipts(
     if merchant_name:
         query = query.filter(models.Receipt.merchant_name.ilike(f"%{merchant_name}%"))
     
-    return query.options(selectinload(models.Receipt.items)).order_by(models.Receipt.date.desc()).offset(skip).limit(limit).all()
+    total = query.count()
+    
+    # dynamic sorting
+    try:
+        sort_attr = getattr(models.Receipt, sort_by)
+    except AttributeError:
+        sort_attr = models.Receipt.date
+        
+    if order == "desc":
+        query = query.order_by(sort_attr.desc())
+    else:
+        query = query.order_by(sort_attr.asc())
+    
+    items = query.options(selectinload(models.Receipt.items)).offset(skip).limit(limit).all()
+    return items, total
 
 
 def update_receipt(db: Session, receipt_id: int, receipt_update: schemas.ReceiptUpdate, user_id: str) -> Optional[models.Receipt]:
@@ -160,12 +176,35 @@ def create_item(db: Session, item: schemas.ItemCreate, user_id: str, receipt_id:
     return db_item
 
 
-def get_pending_items(db: Session, user_id: str) -> List[models.Item]:
-    """Retrieve all pending items (no receipt) for a user"""
-    return db.query(models.Item).filter(
-        models.Item.receipt_id == None,
-        models.Item.user_id == user_id
-    ).all()
+def get_pending_items(
+    db: Session, 
+    user_id: str,
+    skip: int = 0,
+    limit: int = 10,
+    sort_by: str = "name",
+    order: str = "asc"
+) -> Tuple[List[models.Item], int]:
+    """Retrieve all pending items (receipt_id is null) for a user with pagination/sorting"""
+    query = db.query(models.Item).filter(
+        models.Item.user_id == user_id,
+        models.Item.receipt_id == None
+    )
+    
+    total = query.count()
+    
+    # dynamic sorting
+    try:
+        sort_attr = getattr(models.Item, sort_by)
+    except AttributeError:
+        sort_attr = models.Item.name
+        
+    if order == "desc":
+        query = query.order_by(sort_attr.desc())
+    else:
+        query = query.order_by(sort_attr.asc())
+        
+    items = query.offset(skip).limit(limit).all()
+    return items, total
 
 
 def delete_pending_item(db: Session, item_id: int, user_id: str) -> bool:
@@ -404,14 +443,31 @@ def get_incomes(
     db: Session, 
     user_id: str,
     skip: int = 0, 
-    limit: int = 100,
+    limit: int = 10,
+    sort_by: str = "date",
+    order: str = "desc",
     category: Optional[str] = None
-) -> List[models.Income]:
-    """Retrieve income entries with optional filtering"""
+) -> Tuple[List[models.Income], int]:
+    """Retrieve income entries with optional filtering, sorting and pagination"""
     query = db.query(models.Income).filter(models.Income.user_id == user_id)
     if category:
         query = query.filter(models.Income.category == category)
-    return query.order_by(models.Income.date.desc()).offset(skip).limit(limit).all()
+        
+    total = query.count()
+    
+    # dynamic sorting
+    try:
+        sort_attr = getattr(models.Income, sort_by)
+    except AttributeError:
+        sort_attr = models.Income.date
+        
+    if order == "desc":
+        query = query.order_by(sort_attr.desc())
+    else:
+        query = query.order_by(sort_attr.asc())
+        
+    items = query.offset(skip).limit(limit).all()
+    return items, total
 
 def update_income(db: Session, income_id: int, income_update: schemas.IncomeUpdate, user_id: str) -> Optional[models.Income]:
     """Update an income entry"""

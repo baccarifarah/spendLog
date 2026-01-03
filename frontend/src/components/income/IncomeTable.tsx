@@ -2,7 +2,7 @@
 "use client";
 
 import { Income } from "@/lib/api";
-import { Edit2, Trash2 } from "lucide-react";
+import { Edit2, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -11,9 +11,19 @@ interface IncomeTableProps {
     incomes: Income[];
     onEdit: (income: Income) => void;
     onDelete: (id: number) => void;
+    onSort: (column: string) => void;
+    sortBy: string;
+    order: "asc" | "desc";
 }
 
-export function IncomeTable({ incomes, onEdit, onDelete }: IncomeTableProps) {
+export function IncomeTable({
+    incomes,
+    onEdit,
+    onDelete,
+    onSort,
+    sortBy,
+    order
+}: IncomeTableProps) {
     const router = useRouter();
     const { formatAmount } = useCurrency();
 
@@ -23,17 +33,49 @@ export function IncomeTable({ incomes, onEdit, onDelete }: IncomeTableProps) {
                 <table className="min-w-full divide-y divide-border-theme">
                     <thead className="bg-background">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                Source
+                            <th
+                                onClick={() => onSort("source")}
+                                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-background-hover transition-colors"
+                            >
+                                <div className="flex items-center gap-1">
+                                    Source
+                                    {sortBy === "source" && (
+                                        order === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                    )}
+                                </div>
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                Date
+                            <th
+                                onClick={() => onSort("date")}
+                                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-background-hover transition-colors"
+                            >
+                                <div className="flex items-center gap-1">
+                                    Date
+                                    {sortBy === "date" && (
+                                        order === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                    )}
+                                </div>
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                Category
+                            <th
+                                onClick={() => onSort("category")}
+                                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-background-hover transition-colors"
+                            >
+                                <div className="flex items-center gap-1">
+                                    Category
+                                    {sortBy === "category" && (
+                                        order === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                    )}
+                                </div>
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                Amount
+                            <th
+                                onClick={() => onSort("amount")}
+                                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-background-hover transition-colors"
+                            >
+                                <div className="flex items-center gap-1">
+                                    Amount
+                                    {sortBy === "amount" && (
+                                        order === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                    )}
+                                </div>
                             </th>
                             <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                 Actions

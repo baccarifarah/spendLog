@@ -7,6 +7,8 @@ import { IncomeTable } from "@/components/income/IncomeTable";
 import { IncomeFilters } from "@/components/income/IncomeFilters";
 import { IncomeModal } from "@/components/income/IncomeModal";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { TablePagination } from "@/components/common/TablePagination";
+import { useServerPagination } from "@/hooks/useServerPagination";
 import { useToast } from "@/context/ToastContext";
 import {
     Wallet,
@@ -26,6 +28,17 @@ export default function IncomePage() {
     const [incomes, setIncomes] = useState<Income[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [totalCount, setTotalCount] = useState(0);
+
+    const {
+        page,
+        pageSize,
+        sortBy,
+        order,
+        skip,
+        onPageChange,
+        onSort
+    } = useServerPagination(10, "date");
 
     const [filters, setFilters] = useState({
         search: "",
@@ -42,11 +55,15 @@ export default function IncomePage() {
     const fetchIncomes = async () => {
         try {
             setLoading(true);
-            const data = await api.getIncomes({
-                limit: 100,
+            const paginatedData = await api.getIncomes({
+                skip,
+                limit: pageSize,
+                sort_by: sortBy,
+                order,
                 category: filters.category || undefined,
             });
-            setIncomes(data);
+            setIncomes(paginatedData.items);
+            setTotalCount(paginatedData.total);
         } catch (err: any) {
             setError(err.message || "Failed to load income entries");
         } finally {
@@ -56,19 +73,11 @@ export default function IncomePage() {
 
     useEffect(() => {
         fetchIncomes();
-    }, [filters.category]);
-
-    const filteredIncomes = incomes.filter((income) => {
-        const searchLower = filters.search.toLowerCase();
-        return (
-            income.source.toLowerCase().includes(searchLower) ||
-            (income.description && income.description.toLowerCase().includes(searchLower)) ||
-            income.amount.toString().includes(searchLower)
-        );
-    });
+    }, [skip, pageSize, sortBy, order, filters.category]);
 
     const handleFilterChange = (key: keyof typeof filters, value: string) => {
         setFilters((prev) => ({ ...prev, [key]: value }));
+        onPageChange(1); // Reset to first page on filter change
     };
 
     const handleSubmit = async (data: IncomeCreate | Partial<IncomeCreate>) => {
@@ -105,7 +114,7 @@ export default function IncomePage() {
         }
     };
 
-    const totalIncome = incomes.reduce((sum, item) => sum + item.amount, 0);
+    const totalIncome = incomes.reduce((sum, item) => sum + item.amount, 0); // Note: This is now per-page
     const avgIncome = incomes.length > 0 ? totalIncome / incomes.length : 0;
     const maxIncome = incomes.length > 0 ? Math.max(...incomes.map(i => i.amount)) : 0;
 
@@ -137,7 +146,7 @@ export default function IncomePage() {
                 />
                 <StatsCard
                     title="Entries"
-                    value={incomes.length.toString()}
+                    value={totalCount.toString()}
                     icon={<Wallet className="h-5 w-5 text-blue-500" />}
                 />
                 <StatsCard
@@ -166,14 +175,25 @@ export default function IncomePage() {
                         <p className="text-sm text-gray-500">{error}</p>
                     </div>
                 ) : (
-                    <IncomeTable
-                        incomes={filteredIncomes}
-                        onEdit={(income) => {
-                            setEditingIncome(income);
-                            setIsModalOpen(true);
-                        }}
-                        onDelete={handleDelete}
-                    />
+                    <div className="space-y-4">
+                        <IncomeTable
+                            incomes={incomes}
+                            onEdit={(income) => {
+                                setEditingIncome(income);
+                                setIsModalOpen(true);
+                            }}
+                            onDelete={handleDelete}
+                            onSort={onSort}
+                            sortBy={sortBy}
+                            order={order}
+                        />
+                        <TablePagination
+                            currentPage={page}
+                            totalCount={totalCount}
+                            pageSize={pageSize}
+                            onPageChange={onPageChange}
+                        />
+                    </div>
                 )}
             </div>
 

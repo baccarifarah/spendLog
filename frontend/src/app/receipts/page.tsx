@@ -9,6 +9,8 @@ import { ReceiptModal } from "@/components/receipts/ReceiptModal";
 import { MiniStatsCard } from "@/components/dashboard/MiniStatsCard";
 import { SummaryCharts } from "@/components/dashboard/SummaryCharts";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { TablePagination } from "@/components/common/TablePagination";
+import { useServerPagination } from "@/hooks/useServerPagination";
 import { useToast } from "@/context/ToastContext";
 import {
     Receipt as ReceiptIcon,
@@ -29,6 +31,17 @@ export default function ReceiptsPage() {
     const [statsData, setStatsData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [totalCount, setTotalCount] = useState(0);
+
+    const {
+        page,
+        pageSize,
+        sortBy,
+        order,
+        skip,
+        onPageChange,
+        onSort
+    } = useServerPagination(10, "date");
 
     const [filters, setFilters] = useState({
         search: "",
@@ -46,14 +59,19 @@ export default function ReceiptsPage() {
     const fetchReceipts = async () => {
         try {
             setLoading(true);
-            const [receiptsData, themeStats] = await Promise.all([
+            const [paginatedData, themeStats] = await Promise.all([
                 api.getReceipts({
-                    limit: 100,
+                    skip,
+                    limit: pageSize,
+                    sort_by: sortBy,
+                    order,
                     category: filters.category || undefined,
+                    merchant_name: filters.search || undefined,
                 }),
                 api.getDashboardStats()
             ]);
-            setReceipts(receiptsData);
+            setReceipts(paginatedData.items);
+            setTotalCount(paginatedData.total);
             setStatsData(themeStats);
         } catch (err: any) {
             setError(err.message || "Failed to load receipts data");
@@ -64,18 +82,11 @@ export default function ReceiptsPage() {
 
     useEffect(() => {
         fetchReceipts();
-    }, [filters.category]);
-
-    const filteredReceipts = receipts.filter((receipt) => {
-        const searchLower = filters.search.toLowerCase();
-        return (
-            receipt.merchant_name.toLowerCase().includes(searchLower) ||
-            receipt.total_amount.toString().includes(searchLower)
-        );
-    });
+    }, [skip, pageSize, sortBy, order, filters.category, filters.search]);
 
     const handleFilterChange = (key: keyof typeof filters, value: string) => {
         setFilters((prev) => ({ ...prev, [key]: value }));
+        onPageChange(1); // Reset to first page on filter change
     };
 
     const handleSubmit = async (data: ReceiptCreate | ReceiptUpdate) => {
@@ -183,11 +194,22 @@ export default function ReceiptsPage() {
             ) : error ? (
                 <div className="rounded-lg bg-red-50 p-4 text-red-600 dark:bg-red-900/20 dark:text-red-400">Error: {error}</div>
             ) : (
-                <ReceiptsTable
-                    receipts={filteredReceipts}
-                    onEdit={openEditModal}
-                    onDelete={handleDelete}
-                />
+                <div className="space-y-4">
+                    <ReceiptsTable
+                        receipts={receipts}
+                        onEdit={openEditModal}
+                        onDelete={handleDelete}
+                        onSort={onSort}
+                        sortBy={sortBy}
+                        order={order}
+                    />
+                    <TablePagination
+                        currentPage={page}
+                        totalCount={totalCount}
+                        pageSize={pageSize}
+                        onPageChange={onPageChange}
+                    />
+                </div>
             )}
 
             <ReceiptModal

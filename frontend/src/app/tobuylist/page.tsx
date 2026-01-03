@@ -7,6 +7,9 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { ReceiptModal } from "@/components/receipts/ReceiptModal";
 import { AddPendingItemModal } from "@/components/receipts/AddPendingItemModal";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { ToBuyTable } from "@/components/receipts/ToBuyTable";
+import { TablePagination } from "@/components/common/TablePagination";
+import { useServerPagination } from "@/hooks/useServerPagination";
 import { useAuth } from "@/context/AuthContext";
 import { MiniStatsCard } from "@/components/dashboard/MiniStatsCard";
 import { useToast } from "@/context/ToastContext";
@@ -15,6 +18,17 @@ export default function ToBuyListPage() {
     const { showToast } = useToast();
     const [items, setItems] = useState<Item[]>([]);
     const [loading, setLoading] = useState(true);
+    const [totalCount, setTotalCount] = useState(0);
+
+    const {
+        page,
+        pageSize,
+        sortBy,
+        order,
+        skip,
+        onPageChange,
+        onSort
+    } = useServerPagination(10, "name");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     // Deletion Modal State
@@ -32,13 +46,19 @@ export default function ToBuyListPage() {
         if (user) {
             loadItems();
         }
-    }, [user]);
+    }, [user, skip, pageSize, sortBy, order]);
 
     const loadItems = async () => {
         try {
             setLoading(true);
-            const data = await api.getPendingItems();
-            setItems(data);
+            const paginatedData = await api.getPendingItems({
+                skip,
+                limit: pageSize,
+                sort_by: sortBy,
+                order
+            });
+            setItems(paginatedData.items);
+            setTotalCount(paginatedData.total);
         } catch (error) {
             console.error("Failed to load to-buy list:", error);
         } finally {
@@ -121,7 +141,7 @@ export default function ToBuyListPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <MiniStatsCard
                     title="Items to Buy"
-                    value={items.length}
+                    value={totalCount}
                     isCurrency={false}
                     icon={<Package className="h-4 w-4 text-blue-500" />}
                 />
@@ -129,67 +149,22 @@ export default function ToBuyListPage() {
             </div>
 
             {/* Table/List */}
-            <div className="overflow-hidden rounded-xl border border-border-theme bg-background-secondary shadow-sm transition-colors">
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-border-theme">
-                        <thead className="bg-background">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Item Name</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Quantity</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border-theme bg-background-secondary">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-8 text-center text-sm text-gray-500">Loading your list...</td>
-                                </tr>
-                            ) : items.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-12 text-center bg-background-secondary">
-                                        <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                        <p className="text-gray-500 font-medium">Your list is empty</p>
-                                        <p className="text-sm text-gray-400">Add something you need to buy!</p>
-                                    </td>
-                                </tr>
-                            ) : (
-                                items.map((item) => (
-                                    <tr key={item.id} className="hover:bg-background-hover transition-colors">
-                                        <td className="whitespace-nowrap px-6 py-4">
-                                            <div className="text-sm font-semibold text-foreground">{item.name}</div>
-                                        </td>
-                                        <td className="whitespace-nowrap px-6 py-4">
-                                            <div className="text-sm text-gray-500 dark:text-gray-400">x{item.quantity}</div>
-                                        </td>
-                                        <td className="whitespace-nowrap px-6 py-4">
-                                            <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                                                Pending
-                                            </span>
-                                        </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                            <div className="flex justify-end gap-3">
-                                                <button
-                                                    onClick={() => handlePayClick(item)}
-                                                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors dark:bg-emerald-900/20 dark:text-emerald-400"
-                                                >
-                                                    Pay <ArrowRight size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteItem(item.id)}
-                                                    className="rounded-lg p-1.5 text-red-600 hover:bg-background-hover transition-colors dark:text-red-400"
-                                                    title="Remove"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+            <div className="space-y-4">
+                <ToBuyTable
+                    items={items}
+                    onPay={handlePayClick}
+                    onDelete={handleDeleteItem}
+                    onSort={onSort}
+                    sortBy={sortBy}
+                    order={order}
+                    loading={loading}
+                />
+                <TablePagination
+                    currentPage={page}
+                    totalCount={totalCount}
+                    pageSize={pageSize}
+                    onPageChange={onPageChange}
+                />
             </div>
 
             {/* Modals */}
