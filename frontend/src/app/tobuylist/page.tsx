@@ -6,6 +6,7 @@ import { api, Item, PendingItemCreate } from "@/lib/api";
 import { useCurrency } from "@/context/CurrencyContext";
 import { ReceiptModal } from "@/components/receipts/ReceiptModal";
 import { AddPendingItemModal } from "@/components/receipts/AddPendingItemModal";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useAuth } from "@/context/AuthContext";
 import { MiniStatsCard } from "@/components/dashboard/MiniStatsCard";
 import { useToast } from "@/context/ToastContext";
@@ -15,6 +16,10 @@ export default function ToBuyListPage() {
     const [items, setItems] = useState<Item[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+    // Deletion Modal State
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<number | null>(null);
 
     // Payment Modal State
     const [isPayModalOpen, setIsPayModalOpen] = useState(false);
@@ -54,13 +59,21 @@ export default function ToBuyListPage() {
 
     const handleDeleteItem = async (id?: number) => {
         if (!id) return;
-        if (!confirm("Remove this item from your list?")) return;
+        setItemToDelete(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
         try {
-            await api.deletePendingItem(id);
-            setItems(items.filter(i => i.id !== id));
+            await api.deletePendingItem(itemToDelete);
+            setItems(items.filter(i => i.id !== itemToDelete));
             showToast("Item removed", "success");
         } catch (error) {
             showToast("Failed to delete item", "error");
+        } finally {
+            setIsDeleteModalOpen(false);
+            setItemToDelete(null);
         }
     };
 
@@ -194,6 +207,18 @@ export default function ToBuyListPage() {
                 }}
                 onSubmit={handlePaySubmit}
                 pendingItem={selectedItemToPay || undefined}
+            />
+
+            <ConfirmDialog
+                isOpen={isDeleteModalOpen}
+                title="Remove Item?"
+                message="Are you sure you want to remove this item from your list?"
+                confirmLabel="Remove"
+                onConfirm={confirmDelete}
+                onCancel={() => {
+                    setIsDeleteModalOpen(false);
+                    setItemToDelete(null);
+                }}
             />
         </div>
     );

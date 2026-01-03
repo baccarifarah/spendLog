@@ -8,6 +8,7 @@ import { ReceiptFilters } from "@/components/receipts/ReceiptFilters";
 import { ReceiptModal } from "@/components/receipts/ReceiptModal";
 import { MiniStatsCard } from "@/components/dashboard/MiniStatsCard";
 import { SummaryCharts } from "@/components/dashboard/SummaryCharts";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useToast } from "@/context/ToastContext";
 import {
     Receipt as ReceiptIcon,
@@ -37,6 +38,10 @@ export default function ReceiptsPage() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingReceipt, setEditingReceipt] = useState<Receipt | null>(null);
+
+    // Deletion Modal State
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [idToDelete, setIdToDelete] = useState<number | null>(null);
 
     const fetchReceipts = async () => {
         try {
@@ -89,14 +94,21 @@ export default function ReceiptsPage() {
     };
 
     const handleDelete = async (id: number) => {
-        if (confirm("Are you sure you want to delete this receipt?")) {
-            try {
-                await api.deleteReceipt(id);
-                showToast("Receipt deleted successfully", "success");
-                await fetchReceipts();
-            } catch (err: any) {
-                showToast(err.message || "Delete failed", "error");
-            }
+        setIdToDelete(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!idToDelete) return;
+        try {
+            await api.deleteReceipt(idToDelete);
+            showToast("Receipt deleted successfully", "success");
+            await fetchReceipts();
+        } catch (err: any) {
+            showToast(err.message || "Delete failed", "error");
+        } finally {
+            setIsDeleteModalOpen(false);
+            setIdToDelete(null);
         }
     };
 
@@ -184,6 +196,18 @@ export default function ReceiptsPage() {
                 onClose={() => setIsModalOpen(false)}
                 onSubmit={handleSubmit}
                 initialData={editingReceipt}
+            />
+
+            <ConfirmDialog
+                isOpen={isDeleteModalOpen}
+                title="Delete Receipt?"
+                message="Are you sure you want to delete this receipt? This action cannot be undone."
+                confirmLabel="Delete"
+                onConfirm={confirmDelete}
+                onCancel={() => {
+                    setIsDeleteModalOpen(false);
+                    setIdToDelete(null);
+                }}
             />
         </div>
     );

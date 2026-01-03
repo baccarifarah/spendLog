@@ -6,6 +6,7 @@ import { api, Income, IncomeCreate } from "@/lib/api";
 import { IncomeTable } from "@/components/income/IncomeTable";
 import { IncomeFilters } from "@/components/income/IncomeFilters";
 import { IncomeModal } from "@/components/income/IncomeModal";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useToast } from "@/context/ToastContext";
 import {
     Wallet,
@@ -33,6 +34,10 @@ export default function IncomePage() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingIncome, setEditingIncome] = useState<Income | null>(null);
+
+    // Deletion Modal State
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [idToDelete, setIdToDelete] = useState<number | null>(null);
 
     const fetchIncomes = async () => {
         try {
@@ -82,14 +87,21 @@ export default function IncomePage() {
     };
 
     const handleDelete = async (id: number) => {
-        if (confirm("Are you sure you want to delete this income entry?")) {
-            try {
-                await api.deleteIncome(id);
-                showToast("Income entry deleted successfully", "success");
-                await fetchIncomes();
-            } catch (err: any) {
-                showToast(err.message || "Delete failed", "error");
-            }
+        setIdToDelete(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!idToDelete) return;
+        try {
+            await api.deleteIncome(idToDelete);
+            showToast("Income entry deleted successfully", "success");
+            await fetchIncomes();
+        } catch (err: any) {
+            showToast(err.message || "Delete failed", "error");
+        } finally {
+            setIsDeleteModalOpen(false);
+            setIdToDelete(null);
         }
     };
 
@@ -170,6 +182,18 @@ export default function IncomePage() {
                 onClose={() => setIsModalOpen(false)}
                 onSubmit={handleSubmit}
                 initialData={editingIncome}
+            />
+
+            <ConfirmDialog
+                isOpen={isDeleteModalOpen}
+                title="Delete Income?"
+                message="Are you sure you want to delete this income entry? This action cannot be undone."
+                confirmLabel="Delete"
+                onConfirm={confirmDelete}
+                onCancel={() => {
+                    setIsDeleteModalOpen(false);
+                    setIdToDelete(null);
+                }}
             />
         </div>
     );
