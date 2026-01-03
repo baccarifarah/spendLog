@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { LayoutDashboard, Receipt, PieChart, Wallet, Settings, LogOut, ChevronLeft, ChevronRight, Coins } from "lucide-react";
+import { LayoutDashboard, Receipt, Wallet, Settings, LogOut, Moon, Sun, ShoppingCart, PieChart, ChevronLeft, ChevronRight, Coins } from "lucide-react";
 import { clsx } from "clsx";
 import { useCurrency } from "@/context/CurrencyContext";
 
@@ -12,6 +12,7 @@ const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Receipt Manager", href: "/receipts", icon: Receipt },
     { name: "Income entries", href: "/income", icon: Wallet },
+    { name: "To Buy List", href: "/tobuylist", icon: ShoppingCart },
     { name: "Settings", href: "/settings", icon: Settings },
 ];
 

@@ -8,7 +8,7 @@ import schemas
 
 # Receipt CRUD Operations
 def create_receipt(db: Session, receipt: schemas.ReceiptCreate, user_id: str) -> models.Receipt:
-    """Create a new receipt with associated items"""
+    """Create a new receipt with associated items (new or pending)"""
     # Create receipt instance
     db_receipt = models.Receipt(
         merchant_name=receipt.merchant_name,
@@ -24,16 +24,39 @@ def create_receipt(db: Session, receipt: schemas.ReceiptCreate, user_id: str) ->
     db.add(db_receipt)
     db.flush()  # Get the receipt ID
     
-    # Create associated items
+    # 1. Handle new items
     for item_data in receipt.items:
         db_item = models.Item(
             name=item_data.name,
             price=item_data.price,
             quantity=item_data.quantity,
-            receipt_id=db_receipt.id
+            receipt_id=db_receipt.id,
+            user_id=user_id # explicit user_id for consistency
         )
         db.add(db_item)
-    
+        
+    # 2. Handle pending items (convert from To Buy List)
+    if receipt.pending_item_ids:
+        # Fetch pending items that belong to this user
+        pending_items = db.query(models.Item).filter(
+            models.Item.id.in_(receipt.pending_item_ids),
+            models.Item.receipt_id == None,
+            models.Item.user_id == user_id
+        ).all()
+        
+        for item in pending_items:
+            item.receipt_id = db_receipt.id
+            # If it's a single item receipt, might want to assign total_amount to it?
+            # Or leave price as 0? The user said "full expense details" are entered.
+            # Ideally, if we have price specific per item info, we'd need it.
+            # But the UI "Pay" modal usually is for the whole receipt.
+            # For now, let's just link them. The receipt total_amount tracks the money.
+            # We can optionally set item.price = total_amount / count? No, that's imprecise.
+            # Let's leave item.price as is (0) or strict implementation requires item breakdown.
+            # Given the constraint "no price... required" initially, and now "Pay... enter full expense",
+            # the expense data is on the RECEIPT. 
+            pass
+
     db.commit()
     db.refresh(db_receipt)
     return db_receipt
@@ -122,19 +145,43 @@ def delete_receipt(db: Session, receipt_id: int, user_id: str) -> bool:
 
 
 # Item CRUD Operations
-def create_item(db: Session, item: schemas.ItemCreate, receipt_id: int) -> models.Item:
-    """Create a new item for a receipt"""
-    # Assuming receipt ownership checked in controller logic before calling this
+def create_item(db: Session, item: schemas.ItemCreate, user_id: str, receipt_id: Optional[int] = None) -> models.Item:
+    """Create a new item (either for a receipt or pending)"""
     db_item = models.Item(
         name=item.name,
         price=item.price,
         quantity=item.quantity,
-        receipt_id=receipt_id
+        receipt_id=receipt_id,
+        user_id=user_id
     )
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
     return db_item
+
+
+def get_pending_items(db: Session, user_id: str) -> List[models.Item]:
+    """Retrieve all pending items (no receipt) for a user"""
+    return db.query(models.Item).filter(
+        models.Item.receipt_id == None,
+        models.Item.user_id == user_id
+    ).all()
+
+
+def delete_pending_item(db: Session, item_id: int, user_id: str) -> bool:
+    """Delete a pending item"""
+    db_item = db.query(models.Item).filter(
+        models.Item.id == item_id,
+        models.Item.receipt_id == None,
+        models.Item.user_id == user_id
+    ).first()
+    
+    if not db_item:
+        return False
+        
+    db.delete(db_item)
+    db.commit()
+    return True
 
 
 def get_item(db: Session, item_id: int, user_id: str) -> Optional[models.Item]:

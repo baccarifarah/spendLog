@@ -8,9 +8,10 @@ class Item(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
-    price = Column(Float)
+    price = Column(Float, default=0.0) # Price might be 0 for pending items
     quantity = Column(Integer, default=1)
-    receipt_id = Column(Integer, ForeignKey("receipts.id", ondelete="CASCADE"))
+    user_id = Column(String, index=True, nullable=True) # Link to Supabase User ID (for pending items)
+    receipt_id = Column(Integer, ForeignKey("receipts.id", ondelete="CASCADE"), nullable=True)
 
     receipt = relationship("Receipt", back_populates="items")
 

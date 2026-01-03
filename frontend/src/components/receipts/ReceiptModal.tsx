@@ -12,6 +12,7 @@ interface ReceiptModalProps {
     onClose: () => void;
     onSubmit: (data: ReceiptCreate | ReceiptUpdate) => Promise<void>;
     initialData?: Receipt | null;
+    pendingItem?: Item | null;
 }
 
 const CATEGORIES = [
@@ -27,7 +28,7 @@ const CATEGORIES = [
     "Fitness",
 ];
 
-export function ReceiptModal({ isOpen, onClose, onSubmit, initialData }: ReceiptModalProps) {
+export function ReceiptModal({ isOpen, onClose, onSubmit, initialData, pendingItem }: ReceiptModalProps) {
     const [formData, setFormData] = useState<ReceiptCreate>(() => {
         if (initialData) {
             return {
@@ -39,6 +40,21 @@ export function ReceiptModal({ isOpen, onClose, onSubmit, initialData }: Receipt
                 location: initialData.location || "",
                 image_url: initialData.image_url || "",
                 items: initialData.items ? initialData.items.map((i) => ({ ...i })) : [],
+            };
+        } else if (pendingItem) {
+            return {
+                merchant_name: "",
+                date: new Date().toISOString().split("T")[0],
+                total_amount: 0,
+                category: "Uncategorized",
+                currency: "DT",
+                location: "",
+                image_url: "",
+                items: [{
+                    name: pendingItem.name,
+                    quantity: pendingItem.quantity,
+                    price: 0
+                }],
             };
         }
         return {
@@ -68,6 +84,21 @@ export function ReceiptModal({ isOpen, onClose, onSubmit, initialData }: Receipt
                 image_url: initialData.image_url || "",
                 items: initialData.items.map((i) => ({ ...i })), // Deep copy items
             });
+        } else if (pendingItem) {
+            setFormData({
+                merchant_name: "",
+                date: new Date().toISOString().split("T")[0],
+                total_amount: 0,
+                category: "Uncategorized",
+                currency: "DT",
+                location: "",
+                image_url: "",
+                items: [{
+                    name: pendingItem.name,
+                    quantity: pendingItem.quantity,
+                    price: 0
+                }],
+            });
         } else {
             setFormData({
                 merchant_name: "",
@@ -80,7 +111,7 @@ export function ReceiptModal({ isOpen, onClose, onSubmit, initialData }: Receipt
                 items: [],
             });
         }
-    }, [initialData, isOpen]);
+    }, [initialData, pendingItem, isOpen]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -88,8 +119,6 @@ export function ReceiptModal({ isOpen, onClose, onSubmit, initialData }: Receipt
         setError(null);
 
         try {
-            // Calculate total from items if items exist, or rely on manual input
-            // Ideally, total amount should match sum of items if items are present
             await onSubmit(formData);
             onClose();
         } catch (err: any) {
@@ -113,10 +142,7 @@ export function ReceiptModal({ isOpen, onClose, onSubmit, initialData }: Receipt
             return {
                 ...prev,
                 items: newItems,
-                // Optional: Don't recalculate on simple add of empty item, or do?
-                // Adding empty item doesn't change total (price 0)
-                // But let's be consistent.
-                total_amount: calculateTotal(newItems),
+                total_amount: calculateTotal(newItems)
             };
         });
     };
@@ -127,7 +153,7 @@ export function ReceiptModal({ isOpen, onClose, onSubmit, initialData }: Receipt
             return {
                 ...prev,
                 items: newItems,
-                total_amount: calculateTotal(newItems),
+                total_amount: calculateTotal(newItems)
             };
         });
     };
@@ -137,11 +163,18 @@ export function ReceiptModal({ isOpen, onClose, onSubmit, initialData }: Receipt
             const newItems = prev.items?.map((item, i) =>
                 i === index ? { ...item, [field]: value } : item
             ) || [];
-            return {
+
+            const updatedData = {
                 ...prev,
                 items: newItems,
-                total_amount: calculateTotal(newItems),
             };
+
+            // Auto-calculate total if price or quantity changed
+            if (field === 'price' || field === 'quantity') {
+                updatedData.total_amount = calculateTotal(newItems);
+            }
+
+            return updatedData;
         });
     };
 

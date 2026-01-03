@@ -9,6 +9,7 @@ from database import engine
 from api import receipts, income, settings
 from api import webhooks
 from api import users
+from api import items
 
 # Create tables
 models.Base.metadata.create_all(bind=engine)
@@ -40,6 +41,7 @@ app.include_router(income.router)
 app.include_router(settings.router)
 app.include_router(webhooks.router)
 app.include_router(users.router)
+app.include_router(items.router)
 
 @app.get("/")
 def root():

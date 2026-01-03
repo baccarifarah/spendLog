@@ -111,6 +111,11 @@ export interface SettingsUpdate {
     currency?: string;
 }
 
+export interface PendingItemCreate {
+    name: string;
+    quantity: number;
+}
+
 import { createClient } from "@/lib/supabase/client";
 
 let globalAccessToken: string | null = null;
@@ -227,6 +232,24 @@ export const api = {
 
     deleteReceipt: async (id: number): Promise<void> => {
         return fetchAPI<void>(`/receipts/${id}`, {
+            method: "DELETE",
+        });
+    },
+
+    // Pending Items (To Buy List)
+    getPendingItems: async (): Promise<Item[]> => {
+        return fetchAPI<Item[]>("/items/pending");
+    },
+
+    createPendingItem: async (data: PendingItemCreate): Promise<Item> => {
+        return fetchAPI<Item>("/items/pending", {
+            method: "POST",
+            body: JSON.stringify(data),
+        });
+    },
+
+    deletePendingItem: async (id: number): Promise<void> => {
+        return fetchAPI<void>(`/items/${id}`, {
             method: "DELETE",
         });
     },

@@ -24,9 +24,14 @@ class ItemBase(BaseModel):
 class ItemCreate(ItemBase):
     pass
 
+class PendingItemCreate(BaseModel):
+    name: str
+    quantity: int = 1
+
 class Item(ItemBase):
     id: int
-    receipt_id: int
+    receipt_id: Optional[int] = None
+    user_id: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -45,6 +50,7 @@ class ReceiptCreate(ReceiptBase):
     date: datetime.date
     total_amount: float
     items: List[ItemCreate] = []
+    pending_item_ids: List[int] = []
 
 class ReceiptUpdate(BaseModel):
     merchant_name: Optional[str] = None
